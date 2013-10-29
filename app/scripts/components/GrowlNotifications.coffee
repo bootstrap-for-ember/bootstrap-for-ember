@@ -67,8 +67,7 @@ Bootstrap.GrowlNotifications = Ember.CollectionView.extend (
             #@$().fadeIn(@get('fadeInTime'))
             # Be prepared to auto-hide the notification
             @set "timeoutId", setTimeout((->
-                #@send "close"
-                @close()
+                @send "close"
             ).bind(this), @get("parentView.showTime"))
 
             # Fade in the view.
