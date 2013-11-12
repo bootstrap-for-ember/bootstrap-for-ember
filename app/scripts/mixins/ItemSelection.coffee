@@ -16,8 +16,8 @@ Bootstrap.ItemSelection = Ember.Mixin.create(Bootstrap.ItemValue, Bootstrap.With
     ###
     isActive: (->
         #activate default tab if current route matches a tab route
-        if @get('content.linkTo')
-            return true if @get('content.linkTo') and @get('router')?.isActive(@get('content.linkTo'))
+        if @get('content.linkTo') and @get('router')
+            return @get('router').isActive(@get('content.linkTo'))
 
         #TODO: Ensure parentView is inherited from ItemsView
         itemsView = @get('parentView')
