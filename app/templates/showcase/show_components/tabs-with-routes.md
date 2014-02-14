@@ -45,9 +45,9 @@ The `tabsMeta` is an array of the Tabs metadata in the `UserController`:
 
 App.UserController = Ember.Controller.extend({
   tabsMeta: [
-    Ember.Object.create({title: 'General', linkTo: 'user.general'}),
-    Ember.Object.create({title: 'Privacy', linkTo: 'user.privacy'}),
-    Ember.Object.create({title: 'Activities', linkTo: 'user.activities'})
+    Ember.Object.create({title: 'General', link-to: 'user.general'}),
+    Ember.Object.create({title: 'Privacy', link-to: 'user.privacy'}),
+    Ember.Object.create({title: 'Activities', link-to: 'user.activities'})
   ]
 });
 ````
@@ -61,4 +61,4 @@ Simply define a template per nested route, just like you would do if each nested
 
 ## Live example
 
-Want to see it alive? take a look here: {{#linkTo "user.general"}}User Profile{{/linkTo}}
+Want to see it alive? take a look here: {{#link-to "user.general"}}User Profile{{/link-to}}
