@@ -55,7 +55,13 @@ Currently a single notification is displayed as an Alert on top of the screen, e
       if (this.showTimeTimeoutId != null) {
         clearTimeout(this.showTimeTimeoutId);
       }
-      return this.showTimeTimeoutId = setTimeout(this.fadeOut, this.showTime, this);
+      return this.showTimeTimeoutId = setTimeout((function() {
+        var self;
+        self = this;
+        return self.$().fadeOut(self.fadeOutTime, function() {
+          return self.get("content").clear();
+        });
+      }).bind(this), this.showTime);
     },
     fadeOut: function(that) {
       return that.$().fadeOut(that.fadeOutTime, function() {
