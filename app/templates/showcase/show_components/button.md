@@ -99,7 +99,7 @@ Disabled state can also be hooked to a controller property
 ```
 
 * `isButtonDisabled` is a boolean property on the controller
-* `disableButton` is a function on the controller that sets `isButtonDisabled` to _false_
+* `disableButton` is a function on the controller that sets `isButtonDisabled` to _true_
 
 ## Param
 
