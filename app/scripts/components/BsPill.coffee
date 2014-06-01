@@ -13,7 +13,7 @@ Bootstrap.BsPill = Bootstrap.ItemView.extend(Bootstrap.NavItem, Bootstrap.ItemSe
 
     pillAsLinkView: Ember.View.extend(
         tagName: 'a'
-        template: Ember.Handlebars.compile('{{view.parentView.title}}')
+        template: Ember.Handlebars.compile('{{view.parentView.content.title}}')
         attributeBindings: ['href']
         href: "#"
     )
