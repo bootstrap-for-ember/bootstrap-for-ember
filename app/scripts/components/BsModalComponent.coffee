@@ -61,7 +61,7 @@ Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented,
         this.$().modal 'hide'
 
     toggle: ->
-        @toggleProperty 'isVisible'
+        this.$().modal 'toggle'
 
     click: (event) ->
         target = event.target

@@ -42,7 +42,7 @@ Modal component.
       return this.$().modal('hide');
     },
     toggle: function() {
-      return this.toggleProperty('isVisible');
+      return this.$().modal('toggle');
     },
     click: function(event) {
       var target, targetDismiss;
