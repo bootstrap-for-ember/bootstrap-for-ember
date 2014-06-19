@@ -4,10 +4,21 @@ Modal component.
 Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented,
     layoutName: 'components/bs-modal'
     classNames: ['modal']
-    #classNameBindings: ['fade']
-    attributeBindings: ['role', 'aria-labelledby', 'isAriaHidden:aria-hidden', "ariaLabelledBy:aria-labelledby"]
+    classNameBindings:[
+        'fade'
+        'isVisible:in'
+    ]
+
+    attributeBindings:[
+        'role'
+        'aria-labelledby'
+        'isAriaHidden:aria-hidden'
+        'ariaLabelledBy:aria-labelledby'
+        'backdrop:data-backdrop'
+    ]
+    
     isAriaHidden: (->
-        "#{@get('isVisible')}"
+        !"#{@get('isVisible')}"
     ).property('isVisible')
     modalBackdrop: '<div class="modal-backdrop fade in"></div>'
     role: 'dialog'
@@ -32,22 +43,22 @@ Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented,
             @show()
 
     becameVisible: ->
-        Em.$('body').addClass('modal-open')
-        @appendBackdrop() if @get("backdrop")
+        # Em.$('body').addClass('modal-open')
+        # @appendBackdrop() if @get("backdrop")
 
     becameHidden: ->
-        Em.$('body').removeClass('modal-open')
-        @_backdrop.remove() if @_backdrop
+        # Em.$('body').removeClass('modal-open')
+        # @_backdrop.remove() if @_backdrop
 
     appendBackdrop: ->
-        parentElement = @$().parent()
-        @_backdrop = Em.$(@modalBackdrop).appendTo(parentElement)
+        # parentElement = @$().parent()
+        # @_backdrop = Em.$(@modalBackdrop).appendTo(parentElement)
 
     show: ->
-        @set 'isVisible', true
+        this.$().modal 'show'
 
     hide: ->
-        @set 'isVisible', false
+        this.$().modal 'hide'
 
     toggle: ->
         @toggleProperty 'isVisible'
