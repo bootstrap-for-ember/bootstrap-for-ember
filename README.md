@@ -59,6 +59,7 @@ bower install ember-addons.bs_for_ember --save
 ### Dependencies
 
 * Bootstrap 3 css.
+* Bootstrap 3 js.
 * Fontawesome 4.
 * Ember.js 1.3.1 or higher.
 
