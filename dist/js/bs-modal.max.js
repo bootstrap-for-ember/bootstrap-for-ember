@@ -1,15 +1,15 @@
 /*
 Modal component.
-*/
-
+ */
 
 (function() {
   Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented, {
     layoutName: 'components/bs-modal',
     classNames: ['modal'],
-    attributeBindings: ['role', 'aria-labelledby', 'isAriaHidden:aria-hidden', "ariaLabelledBy:aria-labelledby"],
+    classNameBindings: ['fade', 'isVisible:in'],
+    attributeBindings: ['role', 'aria-labelledby', 'isAriaHidden:aria-hidden', 'ariaLabelledBy:aria-labelledby', 'backdrop:data-backdrop'],
     isAriaHidden: (function() {
-      return "" + (this.get('isVisible'));
+      return !("" + (this.get('isVisible')));
     }).property('isVisible'),
     modalBackdrop: '<div class="modal-backdrop fade in"></div>',
     role: 'dialog',
@@ -32,29 +32,17 @@ Modal component.
         return this.show();
       }
     },
-    becameVisible: function() {
-      if (this.get("backdrop")) {
-        return this.appendBackdrop();
-      }
-    },
-    becameHidden: function() {
-      if (this._backdrop) {
-        return this._backdrop.remove();
-      }
-    },
-    appendBackdrop: function() {
-      var parentElement;
-      parentElement = this.$().parent();
-      return this._backdrop = Em.$(this.modalBackdrop).appendTo(parentElement);
-    },
+    becameVisible: function() {},
+    becameHidden: function() {},
+    appendBackdrop: function() {},
     show: function() {
-      return this.set('isVisible', true);
+      return this.$().modal('show');
     },
     hide: function() {
-      return this.set('isVisible', false);
+      return this.$().modal('hide');
     },
     toggle: function() {
-      return this.toggleProperty('isVisible');
+      return this.$().modal('toggle');
     },
     click: function(event) {
       var target, targetDismiss;
@@ -79,6 +67,7 @@ Modal component.
     },
     willDestroyElement: function() {
       var name;
+      Em.$('body').removeClass('modal-open');
       this.removeHandlers();
       name = this.get('name');
       if (name == null) {
@@ -93,15 +82,17 @@ Modal component.
       return jQuery(window.document).unbind("keyup", this._keyUpHandler);
     },
     setupBinders: function() {
-      var handler,
-        _this = this;
-      handler = function(event) {
-        return _this.keyPressed(event);
-      };
+      var handler;
+      handler = (function(_this) {
+        return function(event) {
+          return _this.keyPressed(event);
+        };
+      })(this);
       jQuery(window.document).bind("keyup", handler);
       return this._keyUpHandler = handler;
     }
   });
+
 
   /*
   Bootstrap.BsModalComponent = Bootstrap.BsModalComponent.reopenClass(
@@ -111,8 +102,7 @@ Modal component.
           modalPane = @create(options)
           modalPane.append()
   )
-  */
-
+   */
 
   Bootstrap.ModalManager = Ember.Object.create({
     add: function(name, modalInstance) {
