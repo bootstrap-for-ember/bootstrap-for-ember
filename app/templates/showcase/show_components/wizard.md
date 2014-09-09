@@ -16,8 +16,8 @@ Defining an inline content Wizard with blocks is the simplest form of using the 
 \{\{bs-wizard contentBinding="steps"\}\}
 ```
 
-`contentBinding="steps"` defines a property named _steps_ in the current controll that defines the wizard steps,
-Here is the current controll of this example:
+`contentBinding="steps"` defines a property named _steps_ in the current controller that defines the wizard steps,
+Here is the current controller of this example:
 
 ``` javascript
 Showcase.ShowComponentsWizardController = Ember.Controller.extend({
@@ -34,7 +34,7 @@ Showcase.ShowComponentsWizardController = Ember.Controller.extend({
 
 ## Disable Step Selection
 
-Sometimes it makes sense to create a wizard with fixed step flow, this can be done by disabling the steps by providing `disabled=true` per step.
+Sometimes it makes sense to create a wizard with fixed step flow, this can be done by disabling the steps by providing `disabled: true` per step.
 
 It is also possible to disallow moving to previous step if needed.
 
@@ -61,7 +61,7 @@ Showcase.ShowComponentsWizardController = Ember.Controller.extend({
 
 ## Programatically Created Wizard
 
-Creating a wizard programatically should be used if rendering a Wizard is based on some action such as a button click, for example, a modal can be rendered by pressing a button that will render a Wizard within a modal as the example shown below:
+Creating a wizard programmatically should be used if rendering a Wizard is based on some action such as a button click, for example, a modal can be rendered by pressing a button that will render a Wizard within a modal as the example shown below:
 
 <div class="bs-example">
     {{bs-button title="Start Wizard" type="primary" clicked="createWizard"}}
