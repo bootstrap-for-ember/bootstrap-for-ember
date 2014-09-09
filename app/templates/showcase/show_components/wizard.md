@@ -51,9 +51,9 @@ Showcase.ShowComponentsWizardController = Ember.Controller.extend({
   init: function() {
     this._super();
     this.set('steps', Ember.A([
-      Ember.Object.create({title: 'Step1', template: 'tabs/foo-tabpane', disabled="true"}),
-      Ember.Object.create({title: 'Step2', template: 'tabs/bar-tabpane', disabled="true"}),
-      Ember.Object.create({title: 'Step3', template: 'tabs/baz-tabpane', disabled="true"})
+      Ember.Object.create({title: 'Step1', template: 'tabs/foo-tabpane', disabled: true}),
+      Ember.Object.create({title: 'Step2', template: 'tabs/bar-tabpane', disabled: true}),
+      Ember.Object.create({title: 'Step3', template: 'tabs/baz-tabpane', disabled: true})
     ]));
   }
 });
