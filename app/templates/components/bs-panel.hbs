@@ -1,7 +1,7 @@
 {{#if heading}}
     <div class="panel-heading">
         {{#if collapsible}}
-            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" {{bind-attr href=collapsibleBodyLink}}>
+            <a {{bind-attr href=collapsibleBodyLink class=":accordion-toggle open::collapsed"}} data-toggle="collapse" data-parent="#accordion">
                 {{heading}}
             </a>
         {{else}}
