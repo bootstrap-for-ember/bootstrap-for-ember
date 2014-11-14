@@ -32,6 +32,7 @@ Bootstrap.BsBreadcrumbs = Bootstrap.ItemsView.extend(Bootstrap.WithRouter,
             @get('content').clear()
 
             routes = @get('container').lookup 'router:main'
+            translation = /(.*)Translation$/;
             routes.get('router.currentHandlerInfos').forEach (route, i, arr) =>
                 name = route.name
                 return if name.indexOf('.index') isnt -1 || name is 'application'
@@ -40,6 +41,8 @@ Bootstrap.BsBreadcrumbs = Bootstrap.ItemsView.extend(Bootstrap.WithRouter,
                 routeName = route.handler.routeName
                 if route.handler.breadcrumbs?.name
                     displayName = route.handler.breadcrumbs.name
+                    if translation.test(displayName)
+                        displayName = route.handler[displayName.match(translation)[1]]
                 else if @get('nameDictionary')?["#{@dictionaryNamePrefix}.#{routeName}"]
                     displayName = @get('nameDictionary')["#{@dictionaryNamePrefix}.#{routeName}"]
                 else

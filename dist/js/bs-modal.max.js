@@ -7,6 +7,7 @@ Modal component.
   Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented, {
     layoutName: 'components/bs-modal',
     classNames: ['modal'],
+    classNameBindings: ['fade', 'isVis:in'],
     attributeBindings: ['role', 'aria-labelledby', 'isAriaHidden:aria-hidden', "ariaLabelledBy:aria-labelledby"],
     isAriaHidden: (function() {
       return "" + (this.get('isVisible'));
@@ -18,6 +19,9 @@ Modal component.
     title: null,
     isVisible: false,
     manual: false,
+    isVis: false,
+    fullSizeButtons: false,
+    fade: true,
     didInsertElement: function() {
       var name;
       this._super();
@@ -33,11 +37,13 @@ Modal component.
       }
     },
     becameVisible: function() {
+      Em.$('body').addClass('modal-open');
       if (this.get("backdrop")) {
         return this.appendBackdrop();
       }
     },
     becameHidden: function() {
+      Em.$('body').removeClass('modal-open');
       if (this._backdrop) {
         return this._backdrop.remove();
       }
@@ -48,10 +54,21 @@ Modal component.
       return this._backdrop = Em.$(this.modalBackdrop).appendTo(parentElement);
     },
     show: function() {
-      return this.set('isVisible', true);
+      var current;
+      this.set('isVisible', true);
+      current = this;
+      setTimeout((function() {
+        current.set('isVis', true);
+      }), 15);
     },
     hide: function() {
-      return this.set('isVisible', false);
+      var current;
+      this.set('isVis', false);
+      current = this;
+      this.$().one('webkitTransitionEnd', function(e) {
+        current.set('isVisible', false);
+      });
+      return false;
     },
     toggle: function() {
       return this.toggleProperty('isVisible');
@@ -70,15 +87,21 @@ Modal component.
       }
     },
     close: function(event) {
-      if (this.get('manual')) {
-        this.destroy();
-      } else {
-        this.hide();
-      }
+      var current;
+      this.set('isVis', false);
+      current = this;
+      this.$().one('webkitTransitionEnd', function(e) {
+        if (current.get('manual')) {
+          current.destroy();
+        } else {
+          current.hide();
+        }
+      });
       return this.trigger('closed');
     },
     willDestroyElement: function() {
       var name;
+      Em.$('body').removeClass('modal-open');
       this.removeHandlers();
       name = this.get('name');
       if (name == null) {
@@ -137,13 +160,34 @@ Modal component.
     toggle: function(name) {
       return this.get(name).toggle();
     },
-    confirm: function(controller, title, message, confirmButtonTitle, cancelButtonTitle) {
+    confirm: function(controller, title, message, confirmButtonTitle, confirmButtonEvent, confirmButtonType, cancelButtonTitle, cancelButtonEvent, cancelButtonType, targetObj, fade, fullSizeButtons) {
       var body, buttons;
       if (confirmButtonTitle == null) {
         confirmButtonTitle = "Confirm";
       }
+      if (confirmButtonEvent == null) {
+        confirmButtonEvent = "modalConfirmed";
+      }
+      if (confirmButtonType == null) {
+        confirmButtonType = null;
+      }
       if (cancelButtonTitle == null) {
         cancelButtonTitle = "Cancel";
+      }
+      if (cancelButtonEvent == null) {
+        cancelButtonEvent = "modalCanceled";
+      }
+      if (cancelButtonType == null) {
+        cancelButtonType = null;
+      }
+      if (targetObj == null) {
+        targetObj = controller;
+      }
+      if (fade == null) {
+        fade = true;
+      }
+      if (fullSizeButtons == null) {
+        fullSizeButtons = false;
       }
       body = Ember.View.extend({
         template: Ember.Handlebars.compile(message || "Are you sure you would like to perform this action?")
@@ -151,15 +195,51 @@ Modal component.
       buttons = [
         Ember.Object.create({
           title: confirmButtonTitle,
-          clicked: "modalConfirmed",
+          clicked: confirmButtonEvent,
+          type: confirmButtonType,
           dismiss: 'modal'
         }), Ember.Object.create({
           title: cancelButtonTitle,
-          clicked: "modalCanceled",
+          clicked: cancelButtonEvent,
+          type: cancelButtonType,
           dismiss: 'modal'
         })
       ];
-      return this.open('confirm-modal', title || 'Confirmation required!', body, buttons, controller);
+      return this.open('confirm-modal', title || 'Confirmation required!', body, buttons, controller, fade, fullSizeButtons, targetObj);
+    }
+  }, {
+    okModal: function(controller, title, message, okButtonTitle, okButtonEvent, okButtonType, targetObj, fade, fullSizeButtons) {
+      var body, buttons;
+      if (okButtonTitle == null) {
+        okButtonTitle = "OK";
+      }
+      if (okButtonEvent == null) {
+        okButtonEvent = "okModal";
+      }
+      if (okButtonType == null) {
+        okButtonType = null;
+      }
+      if (targetObj == null) {
+        targetObj = controller;
+      }
+      if (fade == null) {
+        fade = true;
+      }
+      if (fullSizeButtons == null) {
+        fullSizeButtons = false;
+      }
+      body = Ember.View.extend({
+        template: Ember.Handlebars.compile(message || "Are you sure you would like to perform this action?")
+      });
+      buttons = [
+        Ember.Object.create({
+          title: okButtonTitle,
+          clicked: okButtonEvent,
+          type: okButtonType,
+          dismiss: 'modal'
+        })
+      ];
+      return this.open('ok-modal', title || 'Confirmation required!', body, buttons, controller, fade, fullSizeButtons, targetObj);
     },
     openModal: function(modalView, options) {
       var instance, rootElement;
@@ -170,8 +250,14 @@ Modal component.
       instance = modalView.create(options);
       return instance.appendTo(rootElement);
     },
-    open: function(name, title, view, footerButtons, controller) {
+    open: function(name, title, view, footerButtons, controller, fade, fullSizeButtons, targetObj) {
       var cl, modalComponent, template;
+      if (fullSizeButtons == null) {
+        fullSizeButtons = false;
+      }
+      if (targetObj == null) {
+        targetObj = controller;
+      }
       cl = controller.container.lookup('component-lookup:main');
       modalComponent = cl.lookupFactory('bs-modal', controller.get('container')).create();
       modalComponent.setProperties({
@@ -179,7 +265,9 @@ Modal component.
         title: title,
         manual: true,
         footerButtons: footerButtons,
-        targetObject: controller
+        targetObject: targetObj,
+        fade: fade,
+        fullSizeButtons: fullSizeButtons
       });
       if (Ember.typeOf(view) === 'string') {
         template = controller.container.lookup("template:" + view);
@@ -217,7 +305,7 @@ this["Ember"]["TEMPLATES"] = this["Ember"]["TEMPLATES"] || {};
 this["Ember"]["TEMPLATES"]["components/bs-modal"] = Ember.Handlebars.template(function anonymous(Handlebars,depth0,helpers,partials,data) {
 this.compilerInfo = [4,'>= 1.0.0'];
 helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
-  var buffer = '', stack1, hashTypes, hashContexts, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, self=this;
+  var buffer = '', stack1, stack2, hashContexts, hashTypes, options, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, self=this;
 
 function program1(depth0,data) {
   
@@ -281,33 +369,47 @@ function program9(depth0,data) {
   return buffer;
   }
 
-  data.buffer.push("<div class=\"modal-dialog\">\n    <div class=\"modal-content\">\n        <div class=\"modal-header\">\n            <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\">&times;</button>\n            <h4 class=\"modal-title\">\n                ");
+  data.buffer.push("<div class=\"modal-dialog\">\n    <div class=\"modal-content\">\n        <div class=\"modal-header\">\n            <button type=\"button\" ");
+  hashContexts = {'class': depth0};
+  hashTypes = {'class': "STRING"};
+  options = {hash:{
+    'class': (":close allowClose::hide")
+  },contexts:[],types:[],hashContexts:hashContexts,hashTypes:hashTypes,data:data};
+  data.buffer.push(escapeExpression(((stack1 = helpers['bind-attr'] || depth0['bind-attr']),stack1 ? stack1.call(depth0, options) : helperMissing.call(depth0, "bind-attr", options))));
+  data.buffer.push(" data-dismiss=\"modal\" aria-hidden=\"true\">&times;</button>\n            <h4 class=\"modal-title\">\n                ");
   hashTypes = {};
   hashContexts = {};
-  stack1 = helpers['if'].call(depth0, "titleIconClasses", {hash:{},inverse:self.noop,fn:self.program(1, program1, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
+  stack2 = helpers['if'].call(depth0, "titleIconClasses", {hash:{},inverse:self.noop,fn:self.program(1, program1, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
+  if(stack2 || stack2 === 0) { data.buffer.push(stack2); }
   data.buffer.push("\n                ");
   hashContexts = {'unescaped': depth0};
   hashTypes = {'unescaped': "STRING"};
-  stack1 = helpers._triageMustache.call(depth0, "title", {hash:{
+  stack2 = helpers._triageMustache.call(depth0, "title", {hash:{
     'unescaped': ("true")
   },contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
+  if(stack2 || stack2 === 0) { data.buffer.push(stack2); }
   data.buffer.push("\n            </h4>\n        </div>\n        <div class=\"modal-body\">\n            ");
   hashTypes = {};
   hashContexts = {};
-  stack1 = helpers['if'].call(depth0, "body", {hash:{},inverse:self.program(5, program5, data),fn:self.program(3, program3, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
-  data.buffer.push("\n        </div>\n        <div class=\"modal-footer\">\n            ");
+  stack2 = helpers['if'].call(depth0, "body", {hash:{},inverse:self.program(5, program5, data),fn:self.program(3, program3, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
+  if(stack2 || stack2 === 0) { data.buffer.push(stack2); }
+  data.buffer.push("\n        </div>\n        <div ");
+  hashContexts = {'class': depth0};
+  hashTypes = {'class': "STRING"};
+  options = {hash:{
+    'class': (":modal-footer fullSizeButtons:modal-footer-full")
+  },contexts:[],types:[],hashContexts:hashContexts,hashTypes:hashTypes,data:data};
+  data.buffer.push(escapeExpression(((stack1 = helpers['bind-attr'] || depth0['bind-attr']),stack1 ? stack1.call(depth0, options) : helperMissing.call(depth0, "bind-attr", options))));
+  data.buffer.push(">\n            ");
   hashTypes = {};
   hashContexts = {};
-  stack1 = helpers.each.call(depth0, "footerButtons", {hash:{},inverse:self.noop,fn:self.program(7, program7, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
+  stack2 = helpers.each.call(depth0, "footerButtons", {hash:{},inverse:self.noop,fn:self.program(7, program7, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
+  if(stack2 || stack2 === 0) { data.buffer.push(stack2); }
   data.buffer.push("\n            ");
   hashTypes = {};
   hashContexts = {};
-  stack1 = helpers.each.call(depth0, "footerViews", {hash:{},inverse:self.noop,fn:self.program(9, program9, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
+  stack2 = helpers.each.call(depth0, "footerViews", {hash:{},inverse:self.noop,fn:self.program(9, program9, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
+  if(stack2 || stack2 === 0) { data.buffer.push(stack2); }
   data.buffer.push("\n        </div>\n    </div>\n</div>");
   return buffer;
   
