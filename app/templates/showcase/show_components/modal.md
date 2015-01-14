@@ -144,24 +144,65 @@ _Controller's code_:
 
 ``` javascript
 Showcase.ShowComponentsModalController = Ember.Controller.extend({
-  manualButtons: [
-      Ember.Object.create({title: 'Submit', clicked:"submitManual"})
-      Ember.Object.create({title: 'Cancel', dismiss: 'modal'})
-  ],
+    manualButtons: [
+        Ember.Object.create({title: 'Submit', clicked:"submitManual"})
+        Ember.Object.create({title: 'Cancel', dismiss: 'modal'})
+    ],
 
-  actions: {
-    submitManual: function() {
-      Bootstrap.NM.push('Modal destroyed!', 'success');
-      return Bootstrap.ModalManager.close('manualModal');
-    },
-    createModalProgramatically: function() {
-      //@property {string} The name of the modal, required later to close the modal (see submitManual function above)
-      //@property {string} The title of the modal.
-      //@property {string} The template name to render within the modal body, a View class may also be specified.
-      //@property {array} Array of Button meta data
-      //@property {object} The controller instance that instantiate the modal.
-      Bootstrap.ModalManager.open('manualModal', 'Hello', 'demo-template', this.manualButtons, this);
+    actions: {
+      submitManual: function() {
+        Bootstrap.NM.push('Modal destroyed!', 'success');
+        return Bootstrap.ModalManager.close('manualModal');
+      },
+      createModalProgramatically: function() {
+        //@property {string} The name of the modal, required later to close the modal (see submitManual function above)
+        //@property {string} The title of the modal.
+        //@property {string} The template name to render within the modal body, a View class may also be specified.
+        //@property {array} Array of Button meta data
+        //@property {object} The controller instance that instantiate the modal.
+        Bootstrap.ModalManager.open('manualModal', 'Hello', 'demo-template', this.manualButtons, this);
+      }
     }
-  }
+});
+```
+
+## Adding States To Modal Buttons
+
+<div class="bs-example">
+    {{bs-button title="Create Modal With Button States" clicked="createLoadingModalProgramatically"}}
+</div>
+
+``` html
+\{\{bs-button title="Create Modal With Button States" clicked="createLoadingModalProgramatically"\}\}
+```
+
+_Controller's code_:
+
+``` javascript
+Showcase.ShowComponentsModalController = Ember.Controller.extend({
+    loadingManualButtons: [
+        Ember.Object.create({title: 'Submit', clicked:"submitLoadingManual", loadingText:"Saving..."})
+        Ember.Object.create({title: 'Cancel', dismiss: 'modal'})
+    ],
+
+    actions: {
+      submitLoadingManual: function() {
+        Ember.set(@modalInstance, 'loadingState', 'loading')
+        Ember.run.later(() =>
+            Ember.set(@modalInstance, 'loadingState', 'success')
+            Ember.run.later(() =>
+                Ember.set(@modalInstance, 'loadingState', null)                
+            , 2000)
+        , 2000)
+      },
+      createLoadingModalProgramatically: function() {
+        //@property {string} The name of the modal, required later to close the modal (see submitManual function above)
+        //@property {string} The title of the modal.
+        //@property {string} The template name to render within the modal body, a View class may also be specified.
+        //@property {array} Array of Button meta data
+        //@property {object} The controller instance that instantiate the modal.
+        Bootstrap.ModalManager.open('manualModal', 'Hello', 'demo-template', this.loadingManualButtons, this);
+      }
+    }
 });
 ```

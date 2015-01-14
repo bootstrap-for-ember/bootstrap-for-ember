@@ -21,6 +21,8 @@ Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented,
     isVis: false
     fullSizeButtons: false
     fade: true
+    allowClose: true
+    loadingState: null
     
     didInsertElement: ->
         @._super()
@@ -49,18 +51,19 @@ Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented,
     show: ->
         @set 'isVisible', true
         current = this
-        setTimeout (->
+        Ember.run.later (->
+            if current.get('isDestroyed') or current.get('isDestroying')
+                return
             current.set 'isVis', true
             return
         ), 15
-        return
 
     hide: ->
         @set 'isVis', false
         current = this
-        @$().one 'webkitTransitionEnd', (e) ->
-            current.set 'isVisible', false
-            return
+        #@$().one 'webkitTransitionEnd', (e) ->
+        current.set 'isVisible', false
+        #    return
         false
 
     toggle: ->
@@ -79,12 +82,9 @@ Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented,
 
     close: (event) ->
         @set 'isVis', false
-        current = this
-        @$().one 'webkitTransitionEnd', (e) ->
-            if current.get('manual') then current.destroy() else current.hide()
-            return
-         @trigger 'closed'
-        
+        current = this        
+        if current.get('manual') then current.destroy() else current.hide()        
+        @trigger 'closed'
 
     #Invoked automatically by ember when the view is destroyed, giving us a chance to perform cleanups
     willDestroyElement: ->
@@ -195,6 +195,8 @@ Bootstrap.ModalManager = Ember.Object.create(
             )
 
         modalComponent.appendTo(controller.namespace.rootElement)
+
+        return modalComponent
 )
 
 

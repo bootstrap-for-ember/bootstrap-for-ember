@@ -12,14 +12,30 @@
   Bootstrap.BsPopoverComponent = Ember.Component.extend({
     layoutName: 'components/bs-popover',
     classNames: "popover",
-    classNameBindings: ["fade", "in", "realPlacement"],
+    classNameBindings: ["fade", "in", "top", "left", "right", "bottom"],
+    top: (function() {
+      return this.get("realPlacement") === "top";
+    }).property("realPlacement"),
+    left: (function() {
+      return this.get("realPlacement") === "left";
+    }).property("realPlacement"),
+    right: (function() {
+      return this.get("realPlacement") === "right";
+    }).property("realPlacement"),
+    bottom: (function() {
+      return this.get("realPlacement") === "bottom";
+    }).property("realPlacement"),
     titleBinding: "data.title",
     content: Ember.computed.alias('data.content'),
     html: false,
     delay: 0,
     animation: true,
-    fade: Ember.computed.oneWay("animation"),
-    "in": Ember.computed.oneWay("isVisible"),
+    fade: (function() {
+      return this.get("animation");
+    }).property("animation"),
+    "in": (function() {
+      return this.get("isVisible");
+    }).property("isVisible"),
     placement: (function() {
       return this.get("data.placement") || "top";
     }).property("data.placement"),
@@ -55,14 +71,9 @@
       this.set("html", this.get("data.html") || false);
       this.set("template", this.get("data.template") !== undefined);
       if (this.get("template")) {
-        name = "components/bs-popover/_partial-content-" + this.get("tip_id");
+        name = "components/bs-popover/partial-content-" + this.get("tip_id");
         tpl = this.get("data.template");
-        if (typeof tpl === "function") {
-          Ember.TEMPLATES[name] = tpl;
-        } else {
-          Ember.TEMPLATES[name] = Ember.Handlebars.compile(tpl);
-        }
-        return this.set("partialTemplateName", name);
+        return this.set("partialTemplateName", tpl);
       }
     },
     didInsertElement: function() {
@@ -78,9 +89,6 @@
           return clearTimeout(Bootstrap.TooltipBoxManager.timeout);
         });
       }
-      this.$().on("mouseleave", function() {
-        return Bootstrap.TooltipBoxManager.removeTip(_this.get("tip_id"));
-      });
       return this.$().find("img").load(function() {
         return _this.afterRender();
       });
@@ -148,8 +156,9 @@
       }
     },
     actions: {
-      close: function() {
-        return Bootstrap.TooltipBoxManager.removeTip(this.get("tip_id"));
+      close: function(selectedItem) {
+        Bootstrap.TooltipBoxManager.removeTip(this.get("tip_id"));
+        return this.sendAction("action", selectedItem);
       }
     }
   });
@@ -179,7 +188,7 @@
     tooltipsBinding: "Bootstrap.TooltipBoxManager.tooltips"
   });
 
-  template = "" + "{{#each pop in popovers}}" + "   {{bs-popover" + "       tip_id=pop.tip_id" + "       data=pop.data" + "   }}" + "{{/each}}" + "{{#each pop in tooltips}}" + "   {{bs-tooltip" + "       tip_id=pop.tip_id" + "       data=pop.data" + "   }}" + "{{/each}}";
+  template = "" + "{{#each pop in popovers}}" + "   {{bs-popover" + "       tip_id=pop.tip_id" + "       data=pop.data" + "       action=pop.data.action" + "   }}" + "{{/each}}" + "{{#each pop in tooltips}}" + "   {{bs-tooltip" + "       tip_id=pop.tip_id" + "       data=pop.data" + "   }}" + "{{/each}}";
 
   Ember.TEMPLATES["bs-tooltip-box"] = Ember.Handlebars.compile(template);
 
@@ -225,6 +234,11 @@
         });
       }
       options.data.view.on("willClearRender", function() {
+        var pop;
+        pop = self.registeredTips[id];
+        if (pop.eventName === 'manual') {
+          pop.data.removeObserver("show", pop, self.manualObserver);
+        }
         Bootstrap.TooltipBoxManager.removeTip(id);
         $("[" + self.attribute + "='" + id + "']").unbind();
         delete Bootstrap.TooltipBoxManager.registeredTips[id];
@@ -251,15 +265,7 @@
               elem.on("focusout", $.proxy(pop.hide, pop));
               break;
             case "manual":
-              pop.data.addObserver("show", pop, function(sender, key) {
-                var value;
-                value = sender.get(key);
-                if (value) {
-                  this.show();
-                } else {
-                  this.hide();
-                }
-              });
+              pop.data.addObserver("show", pop, this.manualObserver);
               if (pop.data.show) {
                 this.show();
               }
@@ -335,6 +341,15 @@
       id = Bootstrap.TooltipBoxManager.registerTip(type, object, options);
       view.set(Bootstrap.TooltipBoxManager.attribute, id);
     },
+    manualObserver: function(sender, key) {
+      var value;
+      value = sender.get(key);
+      if (value) {
+        this.show();
+      } else {
+        this.hide();
+      }
+    },
     helper: function(path, object, options) {
       var binding, keyword, name, o, p, type, value;
       if ((typeof path === "string") && path !== "") {
@@ -374,6 +389,8 @@
             object[name] = "";
             binding = Ember.Binding.from(p).to(name);
             binding.connect(object);
+          } else {
+            object.set(name, value);
           }
         }
       }

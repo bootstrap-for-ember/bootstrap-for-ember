@@ -108,13 +108,9 @@ Bootstrap.BsPopoverComponent = Ember.Component.extend(
         @set "html", @get("data.html") or false
         @set "template", @get("data.template") isnt `undefined`
         if @get("template")
-            name = "components/bs-popover/_partial-content-" + @get("tip_id")
+            name = "components/bs-popover/partial-content-" + @get("tip_id")
             tpl = @get("data.template")
-            if typeof tpl is "function"
-                Ember.TEMPLATES[name] = tpl
-            else
-                Ember.TEMPLATES[name] = Ember.Handlebars.compile(tpl)
-            @set "partialTemplateName", name
+            @set "partialTemplateName", tpl
 
     didInsertElement: ->
         @$tip = @$()
@@ -127,8 +123,8 @@ Bootstrap.BsPopoverComponent = Ember.Component.extend(
             @$().on "mouseenter", ->
                 clearTimeout Bootstrap.TooltipBoxManager.timeout
 
-        @$().on "mouseleave", =>
-            Bootstrap.TooltipBoxManager.removeTip @get("tip_id")
+        # @$().on "mouseleave", =>
+        #     Bootstrap.TooltipBoxManager.removeTip @get("tip_id")            
 
         @$().find("img").load =>
             @afterRender()
@@ -187,8 +183,10 @@ Bootstrap.BsPopoverComponent = Ember.Component.extend(
             left: pos.left + pos.width
 
     actions:
-        close: ->
+        close: (selectedItem) ->
             Bootstrap.TooltipBoxManager.removeTip @get("tip_id")
+            @sendAction "action", selectedItem
+
 )
 
 Ember.Handlebars.helper 'bs-popover', Bootstrap.BsPopoverComponent
@@ -229,6 +227,7 @@ template = "" +
     "   {{bs-popover" +
     "       tip_id=pop.tip_id" +
     "       data=pop.data" +
+    "       action=pop.data.action" +
     "   }}" +
     "{{/each}}" +
     "{{#each pop in tooltips}}" +
@@ -281,6 +280,9 @@ Bootstrap.TooltipBoxManager = Ember.Object.create(
         return
 
     options.data.view.on "willClearRender", ->
+      pop = self.registeredTips[id]
+      if pop.eventName is 'manual'
+        pop.data.removeObserver "show", pop, self.manualObserver
       Bootstrap.TooltipBoxManager.removeTip id
       $("[" + self.attribute + "='" + id + "']").unbind()
       delete Bootstrap.TooltipBoxManager.registeredTips[id]
@@ -305,13 +307,7 @@ Bootstrap.TooltipBoxManager = Ember.Object.create(
             elem.on "focusin", $.proxy(pop.show, pop)
             elem.on "focusout", $.proxy(pop.hide, pop)
           when "manual"
-            pop.data.addObserver "show", pop, (sender, key) ->
-              value = sender.get(key)
-              if value
-                @show()
-              else
-                @hide()
-              return
+            pop.data.addObserver "show", pop, @manualObserver
 
             @show()  if pop.data.show
     @willSetup = false
@@ -377,6 +373,14 @@ Bootstrap.TooltipBoxManager = Ember.Object.create(
 
     id = Bootstrap.TooltipBoxManager.registerTip(type, object, options)
     view.set Bootstrap.TooltipBoxManager.attribute, id
+    return
+
+  manualObserver: (sender, key) ->
+    value = sender.get(key)
+    if value
+      @show()
+    else
+      @hide()
     return
 
   helper: (path, object, options) ->

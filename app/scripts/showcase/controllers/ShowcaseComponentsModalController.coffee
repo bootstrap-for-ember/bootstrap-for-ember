@@ -1,5 +1,7 @@
 Showcase.ShowComponentsModalController = Ember.Controller.extend(
     message: 'Welcome to Bootstrap for Ember..!'
+    loadingState: null
+    modalInstance: null
 
     #Footer buttons meta data
     myModalButtons: [
@@ -12,6 +14,10 @@ Showcase.ShowComponentsModalController = Ember.Controller.extend(
         Ember.Object.create({title: 'Cancel', dismiss: 'modal'})
     ]
 
+    loadingManualButtons: [
+        Ember.Object.create({title: 'Submit', clicked:"submitLoadingManual", loadingText:"Saving..."})
+        Ember.Object.create({title: 'Cancel', dismiss: 'modal'})
+    ] 
 
     actions:
         #Submit the modal
@@ -34,12 +40,28 @@ Showcase.ShowComponentsModalController = Ember.Controller.extend(
             Bootstrap.NM.push('Modal destroyed!', 'success')
             Bootstrap.ModalManager.close('manualModal')
 
+        submitLoadingManual: ->
+            Ember.set(@modalInstance, 'loadingState', 'loading')
+            Ember.run.later(() =>
+                Ember.set(@modalInstance, 'loadingState', 'success')
+                Ember.run.later(() =>
+                    Ember.set(@modalInstance, 'loadingState', null)                
+                , 2000)
+            , 2000)
+
         createModalProgramatically: ->
             body = Ember.View.extend(
                 template: Ember.Handlebars.compile('This is a programatic ')
             )
 
             Bootstrap.ModalManager.open('manualModal', 'Hello', 'demo-template', @manualButtons, @)
+
+        createLoadingModalProgramatically: ->
+            body = Ember.View.extend(
+                template: Ember.Handlebars.compile('This is a programatic ')
+            )
+
+            @set 'modalInstance', Bootstrap.ModalManager.open('manualModal', 'Hello', 'demo-template', @loadingManualButtons, @)
 
         confirm: ->
             Bootstrap.ModalManager.confirm(@);
