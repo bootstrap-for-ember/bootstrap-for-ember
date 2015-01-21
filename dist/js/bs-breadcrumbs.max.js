@@ -1,5 +1,5 @@
 /*
-Breadcrumbs compponent.
+Breadcrumbs component.
 */
 
 
@@ -29,10 +29,11 @@ Breadcrumbs compponent.
         return this.send('updateCrumbsByRoute');
       },
       updateCrumbsByRoute: function() {
-        var routes,
+        var routes, translation,
           _this = this;
         this.get('content').clear();
         routes = this.get('container').lookup('router:main');
+        translation = /(.*)Translation$/;
         routes.get('router.currentHandlerInfos').forEach(function(route, i, arr) {
           var crumb, displayName, name, routeName, _ref, _ref1, _ref2;
           name = route.name;
@@ -45,6 +46,9 @@ Breadcrumbs compponent.
           routeName = route.handler.routeName;
           if ((_ref1 = route.handler.breadcrumbs) != null ? _ref1.name : void 0) {
             displayName = route.handler.breadcrumbs.name;
+            if (translation.test(displayName)) {
+              displayName = route.handler[displayName.match(translation)[1]];
+            }
           } else if ((_ref2 = _this.get('nameDictionary')) != null ? _ref2["" + _this.dictionaryNamePrefix + "." + routeName] : void 0) {
             displayName = _this.get('nameDictionary')["" + _this.dictionaryNamePrefix + "." + routeName];
           } else {

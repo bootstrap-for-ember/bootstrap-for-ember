@@ -43,7 +43,7 @@
       }
     },
     click: function(event) {
-      return this.sendAction('clicked');
+      return this.sendAction('clicked', event);
     },
     collapsibleBodyId: (function() {
       return "" + (this.get('elementId')) + "_body";
