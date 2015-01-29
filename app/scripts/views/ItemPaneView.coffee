@@ -19,11 +19,3 @@ Bootstrap.ItemPaneView = Ember.View.extend(
         return controller
     ).property('content')
 )
-
-#TODO: Is there a simple way to do this without passing through a helper?
-Ember.Handlebars.helper("bsItemPanePartial", (templateName, options) ->
-    view = options.data.view
-    template = view.templateForName(templateName)
-    Ember.assert("Unable to find template with name '#{templateName}'", template)
-    template(@, { data: options.data })
-)
