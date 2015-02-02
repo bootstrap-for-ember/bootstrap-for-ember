@@ -18,7 +18,11 @@ Bootstrap.BsButtonComponent = Ember.Component.extend(Bootstrap.TypeSupport, Boot
        # If content is an object (may happen when a button is the view class of a collectionView), then assign allowed properties to the button component.
        if @get('content')? and Ember.typeOf(@get('content')) is 'instance'
            c = @get('content')
-           @set key, c[key] for key in @get('allowedProperties') when c[key]?
+           for key in @get('allowedProperties')
+             if c[key]?
+               @set key, c[key]
+             else if c.get?(key)?
+               @set key, c.get(key)
        else
            if not @get('title')?
                @set('title', @get('content'))
