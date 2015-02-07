@@ -115,3 +115,26 @@ Multiple bars can be placed into the same _bs-progress_ to stack them:
         \{\{bs-progressbar type="danger" progress="10"\}\}
     \{\{/bs-progress\}\}
 ```
+
+## With label
+
+A label can be added to the progress bar as mentioned 
+[here](http://getbootstrap.com/components/#progress-label). That works by using
+_bs-progress_ and _bs-progressbar_ as block helpers. The inner content will be
+displayed as label.
+
+<div class="bs-example">
+    {{#bs-progress}}
+        {{#bs-progressbar type="success" progress="100"}}
+            custom label
+        {{/bs-progressbar}}
+    {{/bs-progress}}
+</div>
+
+``` html
+    \{\{#bs-progress\}\}
+        \{\{#bs-progressbar type="success" progress="100"\}\}
+            custom label
+        \{\{/bs-progressbar\}\}
+    \{\{/bs-progress\}\}
+```
