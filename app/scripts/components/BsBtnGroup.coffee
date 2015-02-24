@@ -6,8 +6,7 @@ In case this is a Radio, each item is rendered as a label.
 ###
 Bootstrap.BsBtnGroup = Bootstrap.ItemsView.extend(Bootstrap.SizeSupport, Bootstrap.ItemsSelection,
     classTypePrefix: ['btn-group']
-    classNames: ['btn-group']
-    classNameBindings: ['vertical:btn-group-vertical']
+    classNameBindings: ['vertical:btn-group-vertical:btn-group']
     itemViewClass: Bootstrap.BsButtonComponent.extend(Bootstrap.ItemValue, Bootstrap.ItemSelection,
         init: ->
             @_super()
