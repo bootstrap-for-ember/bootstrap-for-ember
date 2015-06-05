@@ -109,7 +109,7 @@
 }(window.jQuery);
 
 (function() {
-  Bootstrap.BsButtonComponent = Ember.Component.extend(Bootstrap.TypeSupport, Bootstrap.SizeSupport, {
+  Bootstrap.BsButtonComponent = Ember.Component.extend(Ember._ProxyMixin, Bootstrap.TypeSupport, Bootstrap.SizeSupport, {
     layoutName: 'components/bs-button',
     tagName: 'button',
     classNames: ['btn'],
@@ -117,37 +117,60 @@
     classTypePrefix: 'btn',
     clickedParam: null,
     block: null,
-    attributeBindings: ['disabled', 'dismiss:data-dismiss', '_type:type', 'style'],
+    attributeBindings: ['disabled', 'dismiss:data-dismiss', 'contentDismiss:data-dismiss', '_type:type', 'style'],
     _type: 'button',
     bubbles: true,
     allowedProperties: ['title', 'type', 'size', 'block', 'disabled', 'clicked', 'dismiss', 'class'],
     icon_active: void 0,
-    icon_inactive: void 0
-  }, {
+    icon_inactive: void 0,
+    getPojoProperties: function(pojo) {
+      if (Ember.isEmpty(pojo)) {
+        return [];
+      }
+      return Object.keys(pojo);
+    },
+    getProxiedProperties: function(proxyObject) {
+      var contentProperties, objectProperties, prototypeProperties;
+      contentProperties = this.getObjectProperties(proxyObject.get('content'));
+      prototypeProperties = Object.keys(proxyObject.constructor.prototype);
+      objectProperties = this.getPojoProperties(proxyObject);
+      return contentProperties.concat(prototypeProperties).concat(objectProperties).uniq();
+    },
+    getEmberObjectProperties: function(emberObject) {
+      var objectProperties, prototypeProperties;
+      prototypeProperties = Object.keys(emberObject.constructor.prototype);
+      objectProperties = this.getPojoProperties(emberObject);
+      return prototypeProperties.concat(objectProperties).uniq();
+    },
+    getEmberDataProperties: function(emberDataObject) {
+      var attributes, keys;
+      attributes = Ember.get(emberDataObject.constructor, 'attributes');
+      keys = Ember.get(attributes, 'keys.list');
+      return Ember.getProperties(emberDataObject, keys);
+    },
+    getObjectProperties: function(object) {
+      if (object instanceof DS.Model) {
+        return this.getEmberDataProperties(object);
+      } else if (object instanceof Ember.ObjectProxy || Ember._ProxyMixin.detect(object)) {
+        return this.getProxiedProperties(object);
+      } else if (object instanceof Ember.Object) {
+        return this.getEmberObjectProperties(object);
+      } else {
+        return this.getPojoProperties(object);
+      }
+    },
     init: function() {
-      var attr, c, key, _i, _len, _ref, _results;
+      var me, properties;
       this._super();
+      me = this;
       if ((this.get('content') != null) && Ember.typeOf(this.get('content')) === 'instance') {
-        c = this.get('content');
-        _ref = this.get('allowedProperties');
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          key = _ref[_i];
-          if (c[key] != null) {
-            this.set(key, c[key]);
-          }
-        }
+        properties = this.getObjectProperties(this.get('content'));
+        return this.getProperties(properties);
       } else {
         if (this.get('title') == null) {
-          this.set('title', this.get('content'));
+          return this.set('title', this.get('content'));
         }
       }
-      _results = [];
-      for (attr in this) {
-        if (attr.match(/^data-[\w-]*$/) != null) {
-          _results.push(this.attributeBindings.pushObject(attr));
-        }
-      }
-      return _results;
     },
     blockClass: (function() {
       if (this.block) {
@@ -155,7 +178,10 @@
       } else {
         return null;
       }
-    }).property('block').cacheable(),
+    }).property('block'),
+    contentDismiss: (function() {
+      return this.get('content.dismiss');
+    }).property('content.dismiss'),
     click: function(evt) {
       if (!this.get('bubbles')) {
         evt.stopPropagation();
@@ -165,7 +191,15 @@
     loadingChanged: (function() {
       var loading;
       loading = this.get('loading') !== null ? this.get('loading') : "reset";
-      return Ember.$("#" + this.elementId).button(loading);
+      if (loading !== 'reset' && Ember.isEmpty(this.get('reset'))) {
+        this.set('reset', this.$().html());
+      }
+      this.set('disabled', true);
+      this.$().html(this.get(loading));
+      if (loading === 'reset') {
+        this.set('disabled', false);
+        return this.set('reset', null);
+      }
     }).observes('loading'),
     icon: (function() {
       if (this.get('isActive')) {
@@ -223,53 +257,136 @@ A collection of button groups
 
 }).call(this);
 
-this["Ember"] = this["Ember"] || {};
-this["Ember"]["TEMPLATES"] = this["Ember"]["TEMPLATES"] || {};
-
-this["Ember"]["TEMPLATES"]["components/bs-button"] = Ember.Handlebars.template(function anonymous(Handlebars,depth0,helpers,partials,data) {
-this.compilerInfo = [4,'>= 1.0.0'];
-helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
-  var buffer = '', stack1, hashTypes, hashContexts, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, self=this;
-
-function program1(depth0,data) {
-  
-  var buffer = '', stack1, hashContexts, hashTypes, options;
-  data.buffer.push("\n    <i ");
-  hashContexts = {'class': depth0};
-  hashTypes = {'class': "STRING"};
-  options = {hash:{
-    'class': ("icon")
-  },contexts:[],types:[],hashContexts:hashContexts,hashTypes:hashTypes,data:data};
-  data.buffer.push(escapeExpression(((stack1 = helpers['bind-attr'] || depth0['bind-attr']),stack1 ? stack1.call(depth0, options) : helperMissing.call(depth0, "bind-attr", options))));
-  data.buffer.push("></i>\n");
-  return buffer;
-  }
-
-  hashTypes = {};
-  hashContexts = {};
-  stack1 = helpers['if'].call(depth0, "icon", {hash:{},inverse:self.noop,fn:self.program(1, program1, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
-  data.buffer.push("\n");
-  hashTypes = {};
-  hashContexts = {};
-  data.buffer.push(escapeExpression(helpers._triageMustache.call(depth0, "title", {hash:{},contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
-  hashTypes = {};
-  hashContexts = {};
-  data.buffer.push(escapeExpression(helpers._triageMustache.call(depth0, "yield", {hash:{},contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
-  return buffer;
-  
-});
-this["Ember"] = this["Ember"] || {};
-this["Ember"]["TEMPLATES"] = this["Ember"]["TEMPLATES"] || {};
-
-this["Ember"]["TEMPLATES"]["components/bs-btn-toolbar"] = Ember.Handlebars.template(function anonymous(Handlebars,depth0,helpers,partials,data) {
-this.compilerInfo = [4,'>= 1.0.0'];
-helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
-  var hashTypes, hashContexts, escapeExpression=this.escapeExpression;
-
-
-  hashTypes = {};
-  hashContexts = {};
-  data.buffer.push(escapeExpression(helpers._triageMustache.call(depth0, "yield", {hash:{},contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
-  
-});
+Ember.TEMPLATES["components/bs-button"] = Ember.HTMLBars.template((function() {
+  var child0 = (function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createTextNode("    ");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("i");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, element = hooks.element;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var element0 = dom.childAt(fragment, [1]);
+        element(env, element0, context, "bind-attr", [], {"class": "icon"});
+        return fragment;
+      }
+    };
+  }());
+  return {
+    isHTMLBars: true,
+    revision: "Ember@1.11.0",
+    blockParams: 0,
+    cachedFragment: null,
+    hasRendered: false,
+    build: function build(dom) {
+      var el0 = dom.createDocumentFragment();
+      var el1 = dom.createComment("");
+      dom.appendChild(el0, el1);
+      var el1 = dom.createComment("");
+      dom.appendChild(el0, el1);
+      var el1 = dom.createComment("");
+      dom.appendChild(el0, el1);
+      return el0;
+    },
+    render: function render(context, env, contextualElement) {
+      var dom = env.dom;
+      var hooks = env.hooks, get = hooks.get, block = hooks.block, content = hooks.content;
+      dom.detectNamespace(contextualElement);
+      var fragment;
+      if (env.useFragmentCache && dom.canClone) {
+        if (this.cachedFragment === null) {
+          fragment = this.build(dom);
+          if (this.hasRendered) {
+            this.cachedFragment = fragment;
+          } else {
+            this.hasRendered = true;
+          }
+        }
+        if (this.cachedFragment) {
+          fragment = dom.cloneNode(this.cachedFragment, true);
+        }
+      } else {
+        fragment = this.build(dom);
+      }
+      var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+      var morph1 = dom.createMorphAt(fragment,1,1,contextualElement);
+      var morph2 = dom.createMorphAt(fragment,2,2,contextualElement);
+      dom.insertBoundary(fragment, null);
+      dom.insertBoundary(fragment, 0);
+      block(env, morph0, context, "if", [get(env, context, "icon")], {}, child0, null);
+      content(env, morph1, context, "title");
+      content(env, morph2, context, "yield");
+      return fragment;
+    }
+  };
+}()));
+Ember.TEMPLATES["components/bs-btn-toolbar"] = Ember.HTMLBars.template((function() {
+  return {
+    isHTMLBars: true,
+    revision: "Ember@1.11.0",
+    blockParams: 0,
+    cachedFragment: null,
+    hasRendered: false,
+    build: function build(dom) {
+      var el0 = dom.createDocumentFragment();
+      var el1 = dom.createComment("");
+      dom.appendChild(el0, el1);
+      return el0;
+    },
+    render: function render(context, env, contextualElement) {
+      var dom = env.dom;
+      var hooks = env.hooks, content = hooks.content;
+      dom.detectNamespace(contextualElement);
+      var fragment;
+      if (env.useFragmentCache && dom.canClone) {
+        if (this.cachedFragment === null) {
+          fragment = this.build(dom);
+          if (this.hasRendered) {
+            this.cachedFragment = fragment;
+          } else {
+            this.hasRendered = true;
+          }
+        }
+        if (this.cachedFragment) {
+          fragment = dom.cloneNode(this.cachedFragment, true);
+        }
+      } else {
+        fragment = this.build(dom);
+      }
+      var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+      dom.insertBoundary(fragment, null);
+      dom.insertBoundary(fragment, 0);
+      content(env, morph0, context, "yield");
+      return fragment;
+    }
+  };
+}()));

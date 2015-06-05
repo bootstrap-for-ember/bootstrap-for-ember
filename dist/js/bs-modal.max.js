@@ -7,10 +7,32 @@ Modal component.
   Bootstrap.BsModalComponent = Ember.Component.extend(Ember.Evented, {
     layoutName: 'components/bs-modal',
     classNames: ['modal'],
+    classNameBindings: ['fade', 'isVis:in', 'vertical:modal-dialog-center', 'class'],
     attributeBindings: ['role', 'aria-labelledby', 'isAriaHidden:aria-hidden', "ariaLabelledBy:aria-labelledby"],
     isAriaHidden: (function() {
       return "" + (this.get('isVisible'));
     }).property('isVisible'),
+    dialogStyle: (function() {
+      Ember.run.scheduleOnce('afterRender', this, function() {
+        if (this.$()) {
+          return this.$().find('.modal-dialog').css('z-index', this.get('zindex'));
+        }
+      });
+    }).observes('zindex'),
+    dialogVerticalStyle: (function() {
+      if (this.get('vertical')) {
+        Ember.run.scheduleOnce('afterRender', this, function() {
+          var marginHeight;
+          if (this.$()) {
+            marginHeight = this.$('.modal-dialog').height() / 2;
+            return this.$().find('.modal-dialog').css('margin-top', '-' + marginHeight + 'px');
+          }
+        });
+      }
+    }).observes('vertical').on('didInsertElement'),
+    backdropStyle: (function() {
+      return ("z-index: " + (this.get('zindex') - 2) + ";").htmlSafe();
+    }).property('zindex'),
     modalBackdrop: '<div class="modal-backdrop fade in"></div>',
     role: 'dialog',
     footerViews: [],
@@ -18,6 +40,12 @@ Modal component.
     title: null,
     isVisible: false,
     manual: false,
+    isVis: false,
+    fullSizeButtons: false,
+    fade: true,
+    vertical: false,
+    zindex: 1000,
+    keyClose: true,
     didInsertElement: function() {
       var name;
       this._super();
@@ -28,19 +56,16 @@ Modal component.
         name = this.get('elementId');
       }
       Bootstrap.ModalManager.add(name, this);
+      this.dialogStyle();
       if (this.manual) {
         return this.show();
       }
     },
     becameVisible: function() {
-      if (this.get("backdrop")) {
-        return this.appendBackdrop();
-      }
+      return Em.$('body').addClass('modal-open');
     },
     becameHidden: function() {
-      if (this._backdrop) {
-        return this._backdrop.remove();
-      }
+      return Em.$('body').removeClass('modal-open');
     },
     appendBackdrop: function() {
       var parentElement;
@@ -48,10 +73,27 @@ Modal component.
       return this._backdrop = Em.$(this.modalBackdrop).appendTo(parentElement);
     },
     show: function() {
-      return this.set('isVisible', true);
+      this.set('isVisible', true);
+      Ember.run.later(this, (function() {
+        this.set('isVis', true);
+      }), 15);
     },
     hide: function() {
-      return this.set('isVisible', false);
+      if (this.get('isDestroyed') || this.get('isDestroying')) {
+        return;
+      }
+      this.set('isVis', false);
+      if (this.get('fade')) {
+        Ember.run.later(this, (function() {
+          if (this.get('isDestroyed') || this.get('isDestroying')) {
+            return;
+          }
+          this.set('isVisible', false);
+        }), 300);
+      } else {
+        this.set('isVisible', false);
+      }
+      return false;
     },
     toggle: function() {
       return this.toggleProperty('isVisible');
@@ -65,20 +107,39 @@ Modal component.
       }
     },
     keyPressed: function(event) {
-      if (event.keyCode === 27) {
+      if (event.keyCode === 27 && this.get('keyClose') && this.get('zindex') === Bootstrap.ModalManager.get('zindex')) {
         return this.close(event);
       }
     },
     close: function(event) {
-      if (this.get('manual')) {
-        this.destroy();
-      } else {
-        this.hide();
+      if (this.get('isDestroyed') || this.get('isDestroying')) {
+        return;
       }
-      return this.trigger('closed');
+      this.set('isVis', false);
+      if (this.get('fade')) {
+        return Ember.run.later(this, (function() {
+          if (this.get('isDestroyed') || this.get('isDestroying')) {
+            return;
+          }
+          if (this.get('manual')) {
+            this.destroy();
+          } else {
+            this.set('isVisible', false);
+          }
+          this.trigger('closed', this);
+        }), 300);
+      } else {
+        if (this.get('manual')) {
+          this.destroy();
+        } else {
+          this.set('isVisible', false);
+        }
+        return this.trigger('closed', this);
+      }
     },
     willDestroyElement: function() {
       var name;
+      Em.$('body').removeClass('modal-open');
       this.removeHandlers();
       name = this.get('name');
       if (name == null) {
@@ -114,8 +175,19 @@ Modal component.
   */
 
 
-  Bootstrap.ModalManager = Ember.Object.create({
+  Bootstrap.ModalManager = Ember.Object.createWithMixins(Ember.Evented, {
     add: function(name, modalInstance) {
+      var zindex;
+      zindex = this.get('zindex');
+      this.set('zindex', zindex + 2);
+      modalInstance.set('zindex', zindex + 2);
+      modalInstance.on('closed', function(e) {
+        zindex = e.get('zindex');
+        if (zindex === Bootstrap.ModalManager.get('zindex')) {
+          Bootstrap.ModalManager.set('zindex', zindex - 2);
+        }
+        return Bootstrap.ModalManager.trigger('closed', e);
+      });
       return this.set(name, modalInstance);
     },
     register: function(name, modalInstance) {
@@ -137,13 +209,25 @@ Modal component.
     toggle: function(name) {
       return this.get(name).toggle();
     },
-    confirm: function(controller, title, message, confirmButtonTitle, cancelButtonTitle) {
+    confirm: function(controller, title, message, options, confirmButtonTitle, confirmButtonEvent, confirmButtonType, cancelButtonTitle, cancelButtonEvent, cancelButtonType) {
       var body, buttons;
       if (confirmButtonTitle == null) {
         confirmButtonTitle = "Confirm";
       }
+      if (confirmButtonEvent == null) {
+        confirmButtonEvent = "modalConfirmed";
+      }
+      if (confirmButtonType == null) {
+        confirmButtonType = null;
+      }
       if (cancelButtonTitle == null) {
         cancelButtonTitle = "Cancel";
+      }
+      if (cancelButtonEvent == null) {
+        cancelButtonEvent = "modalCanceled";
+      }
+      if (cancelButtonType == null) {
+        cancelButtonType = null;
       }
       body = Ember.View.extend({
         template: Ember.Handlebars.compile(message || "Are you sure you would like to perform this action?")
@@ -151,15 +235,41 @@ Modal component.
       buttons = [
         Ember.Object.create({
           title: confirmButtonTitle,
-          clicked: "modalConfirmed",
+          clicked: confirmButtonEvent,
+          type: confirmButtonType,
           dismiss: 'modal'
         }), Ember.Object.create({
           title: cancelButtonTitle,
-          clicked: "modalCanceled",
+          clicked: cancelButtonEvent,
+          type: cancelButtonType,
           dismiss: 'modal'
         })
       ];
-      return this.open('confirm-modal', title || 'Confirmation required!', body, buttons, controller);
+      return this.open('confirm-modal', title || 'Confirmation required!', body, buttons, controller, options);
+    },
+    okModal: function(controller, title, message, options, okButtonTitle, okButtonEvent, okButtonType) {
+      var body, buttons;
+      if (okButtonTitle == null) {
+        okButtonTitle = "OK";
+      }
+      if (okButtonEvent == null) {
+        okButtonEvent = "okModal";
+      }
+      if (okButtonType == null) {
+        okButtonType = null;
+      }
+      body = Ember.View.extend({
+        template: Ember.Handlebars.compile(message || "Are you sure you would like to perform this action?")
+      });
+      buttons = [
+        Ember.Object.create({
+          title: okButtonTitle,
+          clicked: okButtonEvent,
+          type: okButtonType,
+          dismiss: 'modal'
+        })
+      ];
+      return this.open('ok-modal', title || 'Confirmation required!', body, buttons, controller, options);
     },
     openModal: function(modalView, options) {
       var instance, rootElement;
@@ -170,18 +280,44 @@ Modal component.
       instance = modalView.create(options);
       return instance.appendTo(rootElement);
     },
-    open: function(name, title, view, footerButtons, controller) {
-      var cl, modalComponent, template;
-      cl = controller.container.lookup('component-lookup:main');
-      modalComponent = cl.lookupFactory('bs-modal', controller.get('container')).create();
+    openManual: function(name, title, content, footerButtons, controller, options) {
+      var view;
+      view = Ember.View.extend({
+        template: Ember.Handlebars.compile(content),
+        controller: controller
+      });
+      return this.open(name, title, view, footerButtons, controller, options);
+    },
+    open: function(name, title, view, footerButtons, controller, options) {
+      var cl, modalComponent, rootElement, template;
+      cl = void 0;
+      modalComponent = void 0;
+      template = void 0;
+      if (options == null) {
+        options = {};
+      }
+      if (options.fade == null) {
+        options.fade = this.get("fade");
+      }
+      if (options.fullSizeButtons == null) {
+        options.fullSizeButtons = this.get("fullSizeButtons");
+      }
+      if (options.targetObject == null) {
+        options.targetObject = controller;
+      }
+      if (options.vertical == null) {
+        options.vertical = this.get("vertical");
+      }
+      cl = controller.container.lookup("component-lookup:main");
+      modalComponent = cl.lookupFactory("bs-modal", controller.get("container")).create();
       modalComponent.setProperties({
         name: name,
         title: title,
         manual: true,
-        footerButtons: footerButtons,
-        targetObject: controller
+        footerButtons: footerButtons
       });
-      if (Ember.typeOf(view) === 'string') {
+      modalComponent.setProperties(options);
+      if (Ember.typeOf(view) === "string") {
         template = controller.container.lookup("template:" + view);
         Ember.assert("Template " + view + " was specified for Modal but template could not be found.", template);
         if (template) {
@@ -192,123 +328,369 @@ Modal component.
             })
           });
         }
-      } else if (Ember.typeOf(view) === 'class') {
+      } else if (Ember.typeOf(view) === "class") {
         modalComponent.setProperties({
           body: view,
           controller: controller
         });
       }
-      return modalComponent.appendTo(controller.namespace.rootElement);
-    }
+      rootElement = controller.rootElement;
+      if (typeof controller.rootElement === "undefined") {
+        rootElement = controller.namespace.rootElement;
+      }
+      return modalComponent.appendTo(rootElement);
+    },
+    fade: true,
+    fullSizeButtons: false,
+    vertical: false,
+    zindex: 1000
   });
 
   Ember.Application.initializer({
     name: 'bs-modal',
     initialize: function(container, application) {
-      return container.register('component:bs-modal', Bootstrap.BsModalComponent);
+      return container.register("component:bs-modal", Bootstrap.BsModalComponent);
     }
   });
 
 }).call(this);
 
-this["Ember"] = this["Ember"] || {};
-this["Ember"]["TEMPLATES"] = this["Ember"]["TEMPLATES"] || {};
-
-this["Ember"]["TEMPLATES"]["components/bs-modal"] = Ember.Handlebars.template(function anonymous(Handlebars,depth0,helpers,partials,data) {
-this.compilerInfo = [4,'>= 1.0.0'];
-helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
-  var buffer = '', stack1, hashTypes, hashContexts, helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, self=this;
-
-function program1(depth0,data) {
-  
-  var buffer = '', stack1, hashContexts, hashTypes, options;
-  data.buffer.push("\n                    <i ");
-  hashContexts = {'class': depth0};
-  hashTypes = {'class': "STRING"};
-  options = {hash:{
-    'class': ("titleIconClasses")
-  },contexts:[],types:[],hashContexts:hashContexts,hashTypes:hashTypes,data:data};
-  data.buffer.push(escapeExpression(((stack1 = helpers['bind-attr'] || depth0['bind-attr']),stack1 ? stack1.call(depth0, options) : helperMissing.call(depth0, "bind-attr", options))));
-  data.buffer.push("></i>\n                ");
-  return buffer;
-  }
-
-function program3(depth0,data) {
-  
-  var buffer = '', hashTypes, hashContexts;
-  data.buffer.push("\n                ");
-  hashTypes = {};
-  hashContexts = {};
-  data.buffer.push(escapeExpression(helpers.view.call(depth0, "view.body", {hash:{},contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
-  data.buffer.push("\n            ");
-  return buffer;
-  }
-
-function program5(depth0,data) {
-  
-  var buffer = '', hashTypes, hashContexts;
-  data.buffer.push("\n                ");
-  hashTypes = {};
-  hashContexts = {};
-  data.buffer.push(escapeExpression(helpers._triageMustache.call(depth0, "yield", {hash:{},contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
-  data.buffer.push("\n            ");
-  return buffer;
-  }
-
-function program7(depth0,data) {
-  
-  var buffer = '', stack1, hashContexts, hashTypes, options;
-  data.buffer.push("\n                ");
-  hashContexts = {'content': depth0,'targetObjectBinding': depth0};
-  hashTypes = {'content': "ID",'targetObjectBinding': "STRING"};
-  options = {hash:{
-    'content': (""),
-    'targetObjectBinding': ("view.targetObject")
-  },contexts:[],types:[],hashContexts:hashContexts,hashTypes:hashTypes,data:data};
-  data.buffer.push(escapeExpression(((stack1 = helpers['bs-button'] || depth0['bs-button']),stack1 ? stack1.call(depth0, options) : helperMissing.call(depth0, "bs-button", options))));
-  data.buffer.push("\n            ");
-  return buffer;
-  }
-
-function program9(depth0,data) {
-  
-  var buffer = '', hashTypes, hashContexts;
-  data.buffer.push("\n                ");
-  hashTypes = {};
-  hashContexts = {};
-  data.buffer.push(escapeExpression(helpers.view.call(depth0, "", {hash:{},contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
-  data.buffer.push("\n            ");
-  return buffer;
-  }
-
-  data.buffer.push("<div class=\"modal-dialog\">\n    <div class=\"modal-content\">\n        <div class=\"modal-header\">\n            <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\">&times;</button>\n            <h4 class=\"modal-title\">\n                ");
-  hashTypes = {};
-  hashContexts = {};
-  stack1 = helpers['if'].call(depth0, "titleIconClasses", {hash:{},inverse:self.noop,fn:self.program(1, program1, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
-  data.buffer.push("\n                ");
-  hashContexts = {'unescaped': depth0};
-  hashTypes = {'unescaped': "STRING"};
-  stack1 = helpers._triageMustache.call(depth0, "title", {hash:{
-    'unescaped': ("true")
-  },contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
-  data.buffer.push("\n            </h4>\n        </div>\n        <div class=\"modal-body\">\n            ");
-  hashTypes = {};
-  hashContexts = {};
-  stack1 = helpers['if'].call(depth0, "body", {hash:{},inverse:self.program(5, program5, data),fn:self.program(3, program3, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
-  data.buffer.push("\n        </div>\n        <div class=\"modal-footer\">\n            ");
-  hashTypes = {};
-  hashContexts = {};
-  stack1 = helpers.each.call(depth0, "footerButtons", {hash:{},inverse:self.noop,fn:self.program(7, program7, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
-  data.buffer.push("\n            ");
-  hashTypes = {};
-  hashContexts = {};
-  stack1 = helpers.each.call(depth0, "footerViews", {hash:{},inverse:self.noop,fn:self.program(9, program9, data),contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data});
-  if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
-  data.buffer.push("\n        </div>\n    </div>\n</div>");
-  return buffer;
-  
-});
+Ember.TEMPLATES["components/bs-modal"] = Ember.HTMLBars.template((function() {
+  var child0 = (function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createTextNode("                    ");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createElement("i");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, element = hooks.element;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var element0 = dom.childAt(fragment, [1]);
+        element(env, element0, context, "bind-attr", [], {"class": "titleIconClasses"});
+        return fragment;
+      }
+    };
+  }());
+  var child1 = (function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createTextNode("                ");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+        inline(env, morph0, context, "view", [get(env, context, "view.body")], {});
+        return fragment;
+      }
+    };
+  }());
+  var child2 = (function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createTextNode("                ");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, content = hooks.content;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+        content(env, morph0, context, "yield");
+        return fragment;
+      }
+    };
+  }());
+  var child3 = (function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createTextNode("                ");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+        inline(env, morph0, context, "bs-button", [], {"content": get(env, context, "footerButton"), "targetObjectBinding": "view.targetObject"});
+        return fragment;
+      }
+    };
+  }());
+  var child4 = (function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createTextNode("                ");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+        inline(env, morph0, context, "view", [get(env, context, "footerView")], {});
+        return fragment;
+      }
+    };
+  }());
+  return {
+    isHTMLBars: true,
+    revision: "Ember@1.11.0",
+    blockParams: 0,
+    cachedFragment: null,
+    hasRendered: false,
+    build: function build(dom) {
+      var el0 = dom.createDocumentFragment();
+      var el1 = dom.createElement("div");
+      dom.setAttribute(el1,"class","modal-dialog");
+      var el2 = dom.createTextNode("\n    ");
+      dom.appendChild(el1, el2);
+      var el2 = dom.createElement("div");
+      dom.setAttribute(el2,"class","modal-content");
+      var el3 = dom.createTextNode("\n        ");
+      dom.appendChild(el2, el3);
+      var el3 = dom.createElement("div");
+      dom.setAttribute(el3,"class","modal-header");
+      var el4 = dom.createTextNode("\n            ");
+      dom.appendChild(el3, el4);
+      var el4 = dom.createElement("button");
+      dom.setAttribute(el4,"type","button");
+      dom.setAttribute(el4,"data-dismiss","modal");
+      dom.setAttribute(el4,"aria-hidden","true");
+      var el5 = dom.createTextNode("×");
+      dom.appendChild(el4, el5);
+      dom.appendChild(el3, el4);
+      var el4 = dom.createTextNode("\n            ");
+      dom.appendChild(el3, el4);
+      var el4 = dom.createElement("h4");
+      dom.setAttribute(el4,"class","modal-title");
+      var el5 = dom.createTextNode("\n");
+      dom.appendChild(el4, el5);
+      var el5 = dom.createComment("");
+      dom.appendChild(el4, el5);
+      var el5 = dom.createTextNode("                ");
+      dom.appendChild(el4, el5);
+      var el5 = dom.createComment("");
+      dom.appendChild(el4, el5);
+      var el5 = dom.createTextNode("\n            ");
+      dom.appendChild(el4, el5);
+      dom.appendChild(el3, el4);
+      var el4 = dom.createTextNode("\n        ");
+      dom.appendChild(el3, el4);
+      dom.appendChild(el2, el3);
+      var el3 = dom.createTextNode("\n        ");
+      dom.appendChild(el2, el3);
+      var el3 = dom.createElement("div");
+      dom.setAttribute(el3,"class","modal-body");
+      var el4 = dom.createTextNode("\n");
+      dom.appendChild(el3, el4);
+      var el4 = dom.createComment("");
+      dom.appendChild(el3, el4);
+      var el4 = dom.createTextNode("        ");
+      dom.appendChild(el3, el4);
+      dom.appendChild(el2, el3);
+      var el3 = dom.createTextNode("\n        ");
+      dom.appendChild(el2, el3);
+      var el3 = dom.createElement("div");
+      var el4 = dom.createTextNode("\n");
+      dom.appendChild(el3, el4);
+      var el4 = dom.createComment("");
+      dom.appendChild(el3, el4);
+      var el4 = dom.createComment("");
+      dom.appendChild(el3, el4);
+      var el4 = dom.createTextNode("        ");
+      dom.appendChild(el3, el4);
+      dom.appendChild(el2, el3);
+      var el3 = dom.createTextNode("\n    ");
+      dom.appendChild(el2, el3);
+      dom.appendChild(el1, el2);
+      var el2 = dom.createTextNode("\n");
+      dom.appendChild(el1, el2);
+      dom.appendChild(el0, el1);
+      var el1 = dom.createTextNode("\n\n");
+      dom.appendChild(el0, el1);
+      var el1 = dom.createElement("div");
+      dom.appendChild(el0, el1);
+      return el0;
+    },
+    render: function render(context, env, contextualElement) {
+      var dom = env.dom;
+      var hooks = env.hooks, element = hooks.element, get = hooks.get, block = hooks.block, content = hooks.content;
+      dom.detectNamespace(contextualElement);
+      var fragment;
+      if (env.useFragmentCache && dom.canClone) {
+        if (this.cachedFragment === null) {
+          fragment = this.build(dom);
+          if (this.hasRendered) {
+            this.cachedFragment = fragment;
+          } else {
+            this.hasRendered = true;
+          }
+        }
+        if (this.cachedFragment) {
+          fragment = dom.cloneNode(this.cachedFragment, true);
+        }
+      } else {
+        fragment = this.build(dom);
+      }
+      var element1 = dom.childAt(fragment, [0, 1]);
+      var element2 = dom.childAt(element1, [1]);
+      var element3 = dom.childAt(element2, [1]);
+      var element4 = dom.childAt(element2, [3]);
+      var element5 = dom.childAt(element1, [5]);
+      var element6 = dom.childAt(fragment, [2]);
+      var morph0 = dom.createMorphAt(element4,1,1);
+      var morph1 = dom.createUnsafeMorphAt(element4,3,3);
+      var morph2 = dom.createMorphAt(dom.childAt(element1, [3]),1,1);
+      var morph3 = dom.createMorphAt(element5,1,1);
+      var morph4 = dom.createMorphAt(element5,2,2);
+      element(env, element3, context, "bind-attr", [], {"class": ":close allowClose::hide"});
+      block(env, morph0, context, "if", [get(env, context, "titleIconClasses")], {}, child0, null);
+      content(env, morph1, context, "title");
+      block(env, morph2, context, "if", [get(env, context, "body")], {}, child1, child2);
+      element(env, element5, context, "bind-attr", [], {"class": ":modal-footer fullSizeButtons:modal-footer-full"});
+      block(env, morph3, context, "each", [get(env, context, "footerButtons")], {"keyword": "footerButton"}, child3, null);
+      block(env, morph4, context, "each", [get(env, context, "footerViews")], {"keyword": "footerView"}, child4, null);
+      element(env, element6, context, "bind-attr", [], {"style": get(env, context, "backdropStyle"), "class": ":modal-backdrop fade:fade backdrop:in"});
+      return fragment;
+    }
+  };
+}()));

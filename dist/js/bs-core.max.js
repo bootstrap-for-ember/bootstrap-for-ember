@@ -92,13 +92,16 @@
     type: 'default',
     typeClass: (function() {
       var pref, type;
-      type = this.get('type');
+      type = this.get('content.type');
+      if ((type == null) || typeof type === 'undefined') {
+        type = this.get('type');
+      }
       if (type == null) {
         type = 'default';
       }
       pref = this.get('classTypePrefix');
       return "" + pref + "-" + type;
-    }).property('type').cacheable()
+    }).property('type', 'content.type').cacheable()
   });
 
 }).call(this);
@@ -417,7 +420,7 @@ Views that inherits from this view can be enhanced with:
 
 (function() {
   Bootstrap.ItemPaneView = Ember.View.extend({
-    template: Ember.Handlebars.compile(['{{#if view.content.template}}', '{{bsItemPanePartial view.content.template}}', '{{/if}}'].join("\n")),
+    templateName: 'views/item-pane',
     corrItem: (function() {
       var view, _i, _len, _ref;
       if (this.get('parentView').get('corrItemsView') != null) {
@@ -474,3 +477,88 @@ Views that inherits from this view can be enhanced with:
   });
 
 }).call(this);
+
+Ember.TEMPLATES["app/templates/views/item-pane"] = Ember.HTMLBars.template((function() {
+  var child0 = (function() {
+    return {
+      isHTMLBars: true,
+      revision: "Ember@1.11.0",
+      blockParams: 0,
+      cachedFragment: null,
+      hasRendered: false,
+      build: function build(dom) {
+        var el0 = dom.createDocumentFragment();
+        var el1 = dom.createTextNode("  ");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createComment("");
+        dom.appendChild(el0, el1);
+        var el1 = dom.createTextNode("\n");
+        dom.appendChild(el0, el1);
+        return el0;
+      },
+      render: function render(context, env, contextualElement) {
+        var dom = env.dom;
+        var hooks = env.hooks, get = hooks.get, inline = hooks.inline;
+        dom.detectNamespace(contextualElement);
+        var fragment;
+        if (env.useFragmentCache && dom.canClone) {
+          if (this.cachedFragment === null) {
+            fragment = this.build(dom);
+            if (this.hasRendered) {
+              this.cachedFragment = fragment;
+            } else {
+              this.hasRendered = true;
+            }
+          }
+          if (this.cachedFragment) {
+            fragment = dom.cloneNode(this.cachedFragment, true);
+          }
+        } else {
+          fragment = this.build(dom);
+        }
+        var morph0 = dom.createMorphAt(fragment,1,1,contextualElement);
+        inline(env, morph0, context, "bsItemPanePartial", [get(env, context, "view.content.template")], {});
+        return fragment;
+      }
+    };
+  }());
+  return {
+    isHTMLBars: true,
+    revision: "Ember@1.11.0",
+    blockParams: 0,
+    cachedFragment: null,
+    hasRendered: false,
+    build: function build(dom) {
+      var el0 = dom.createDocumentFragment();
+      var el1 = dom.createComment("");
+      dom.appendChild(el0, el1);
+      return el0;
+    },
+    render: function render(context, env, contextualElement) {
+      var dom = env.dom;
+      var hooks = env.hooks, get = hooks.get, block = hooks.block;
+      dom.detectNamespace(contextualElement);
+      var fragment;
+      if (env.useFragmentCache && dom.canClone) {
+        if (this.cachedFragment === null) {
+          fragment = this.build(dom);
+          if (this.hasRendered) {
+            this.cachedFragment = fragment;
+          } else {
+            this.hasRendered = true;
+          }
+        }
+        if (this.cachedFragment) {
+          fragment = dom.cloneNode(this.cachedFragment, true);
+        }
+      } else {
+        fragment = this.build(dom);
+      }
+      var morph0 = dom.createMorphAt(fragment,0,0,contextualElement);
+      dom.insertBoundary(fragment, null);
+      dom.insertBoundary(fragment, 0);
+      block(env, morph0, context, "if", [get(env, context, "view.content.template")], {}, child0, null);
+      return fragment;
+    }
+  };
+}()));
