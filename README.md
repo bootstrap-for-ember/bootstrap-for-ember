@@ -24,7 +24,7 @@ There are several advantaged for using [Indexia Ember Components](http://indexia
 
 * Components were refactored and designed much better.
 * Components are Ember-Cli addons for easy integration.
-* Components are splitted into addons in order to avoid blowing up the app size with unneccessary bits.
+* Components are splitted into addons in order to avoid blowing up the app size with unnecessary bits.
 
 For more info see: http://indexiatech.github.io/ember-components/#/overview
 
